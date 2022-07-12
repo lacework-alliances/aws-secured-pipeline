@@ -2,9 +2,10 @@ version: 0.2
 phases:
   build:
     commands:
-      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin STAGING_DOCKER_REG
-      - docker pull "STAGING_DOCKER_REG/$IMAGE_NAME"
-      - docker tag "STAGING_DOCKER_REG/$IMAGE_NAME" "PRODUCTION_DOCKER_REG/$IMAGE_NAME"
-      - docker image push -a "PRODUCTION_DOCKER_REG/$IMAGE_NAME"
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $STAGING_DOCKER_REG
+      - docker pull "$STAGING_DOCKER_REG/$IMAGE_NAME"
+      - docker tag "$STAGING_DOCKER_REG/$IMAGE_NAME" "$PRODUCTION_DOCKER_REG/$IMAGE_NAME"
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $PRODUCTION_DOCKER_REG
+      - docker image push -a "$PRODUCTION_DOCKER_REG/$IMAGE_NAME"
 
 
