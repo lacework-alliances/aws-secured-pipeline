@@ -304,7 +304,7 @@ Resources:
           - Name: STAGING_DOCKER_REG
             Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com"
           - Name: PRODUCTION_DOCKER_REG
-            Value: "381231809965.dkr.ecr.${AWS::Region}.amazonaws.com"
+            Value: !Sub "381231809965.dkr.ecr.${AWS::Region}.amazonaws.com"
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildScanProductionImageProject:
