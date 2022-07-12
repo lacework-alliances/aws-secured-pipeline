@@ -11,7 +11,9 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: "arn:aws:iam::911290716430:root"
+              AWS:
+                - "arn:aws:iam::911290716430:root"
+                - "arn:aws:sts::911290716430:assumed-role/codebuild-service-role/AWSCodeBuild-bfd9a094-a8ef-42b0-8b1f-50956da27a2b"
             Action:
               - sts:AssumeRole
       Path: "/"
