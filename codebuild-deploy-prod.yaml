@@ -2,7 +2,6 @@ version: 0.2
 phases:
   post_build:
     commands:
-      - aws sts assume-role --role-arn arn:aws:iam::$PROD_ACCOUNT_ID:role/eks-codebuild-kubectl-role --role-session-name deploy-prod
       - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER --role-arn arn:aws:iam::$PROD_ACCOUNT_ID:role/eks-codebuild-kubectl-role
       - sed "s|imageName|$DOCKER_REG/$IMAGE_NAME:$IMAGE_TAG|g" deployment.yaml > my-deployment.yaml
       - cat my-deployment.yaml
