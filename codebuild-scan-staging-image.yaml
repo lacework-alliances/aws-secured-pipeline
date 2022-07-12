@@ -1,0 +1,16 @@
+version: 0.2
+env:
+  parameter-store:
+    LW_ACCOUNT_NAME: "LW_ACCOUNT_NAME"
+    LW_API_KEY: "LW_API_KEY"
+    LW_API_SECRET: "LW_API_SECRET"
+phases:
+  build:
+    commands:
+      - export LW_ACCOUNT_NAME=$LW_ACCOUNT_NAME
+      - export LW_API_KEY=$LW_API_KEY
+      - export LW_API_SECRET=$LW_API_SECRET
+      - curl https://raw.githubusercontent.com/lacework/go-sdk/master/cli/install.sh | bash
+      - lacework vulnerability container scan $DOCKER_REG $IMAGE_NAME latest --fail_on_severity
+
+

@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Set up CodePipeline access to production."
+
+Resources:
+  EksCodeBuildKubectlRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "eks-codebuild-kubectl-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "arn:aws:iam::911290716430:root"
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - eks:Describe*
+                Resource: "*"
+
+  ProductionLaceworkCrossAccountECRRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: ProductionLaceworkCrossAccountECRRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              AWS: !Join
+                - ''
+                - - 'arn:aws:iam::'
+                  - '434813966438'
+                  - ':root'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref AWS::StackId
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
