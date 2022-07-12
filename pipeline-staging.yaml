@@ -207,9 +207,9 @@ Resources:
           - Name: AWS_REGION
             Value: !Ref AWS::Region
           - Name: IMAGE_NAME
-            Value: demo-app
+            Value: "demo-app"
           - Name: DOCKER_REG
-            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com"
+            Value: "911290716430.dkr.ecr.us-west-2.amazonaws.com"
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildScanStagingImageProject:
@@ -228,9 +228,9 @@ Resources:
         Type: "LINUX_CONTAINER"
         EnvironmentVariables:
           - Name: IMAGE_NAME
-            Value: demo-app
+            Value: "demo-app"
           - Name: DOCKER_REG
-            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com"
+            Value: "911290716430.dkr.ecr.us-west-2.amazonaws.com"
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildDeployStagingProject:
@@ -249,17 +249,17 @@ Resources:
         Type: "LINUX_CONTAINER"
         EnvironmentVariables:
           - Name: STAGING_ACCOUNT_ID
-            Value: !Ref AWS::AccountId
+            Value: "911290716430"
           - Name: AWS_REGION
             Value: !Ref AWS::Region
           - Name: DOCKER_REG
-            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com"
+            Value: "911290716430.dkr.ecr.us-west-2.amazonaws.com"
           - Name: EKS_CLUSTER
-            Value: !Sub "staging-eks-cluster"
+            Value: "staging-eks-cluster"
           - Name: IMAGE_NAME
-            Value: demo-app
+            Value: "demo-app"
           - Name: IMAGE_TAG
-            Value: latest
+            Value: "latest"
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildScanStagingConfigProject:
@@ -278,7 +278,7 @@ Resources:
         Type: "LINUX_CONTAINER"
         EnvironmentVariables:
           - Name: STAGING_ACCOUNT_ID
-            Value: !Ref AWS::AccountId
+            Value: "911290716430"
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildPromoteProductionRepoProject:
@@ -297,10 +297,12 @@ Resources:
         Type: "LINUX_CONTAINER"
         PrivilegedMode: true
         EnvironmentVariables:
+          - Name: AWS_REGION
+            Value: !Ref AWS::Region
           - Name: IMAGE_NAME
-            Value: demo-app
+            Value: "demo-app"
           - Name: IMAGE_TAG
-            Value: latest
+            Value: "latest"
           - Name: STAGING_DOCKER_REG
             Value: "911290716430.dkr.ecr.us-west-2.amazonaws.com"
           - Name: PRODUCTION_DOCKER_REG
@@ -323,11 +325,11 @@ Resources:
         Type: "LINUX_CONTAINER"
         EnvironmentVariables:
           - Name: DOCKER_REG
-            Value: 381231809965.dkr.ecr.us-west-2.amazonaws.com
+            Value: "381231809965.dkr.ecr.us-west-2.amazonaws.com"
           - Name: IMAGE_NAME
-            Value: demo-app
+            Value: "demo-app"
           - Name: IMAGE_TAG
-            Value: latest
+            Value: "latest"
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildDeployProductionProject:
@@ -346,17 +348,17 @@ Resources:
         Type: "LINUX_CONTAINER"
         EnvironmentVariables:
           - Name: PROD_ACCOUNT_ID
-            Value: 381231809965
+            Value: "381231809965"
           - Name: AWS_REGION
             Value: !Ref AWS::Region
           - Name: DOCKER_REG
-            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com"
+            Value: "381231809965.dkr.ecr.us-west-2.amazonaws.com"
           - Name: EKS_CLUSTER
             Value: "prod-eks-cluster"
           - Name: IMAGE_NAME
-            Value: demo-app
+            Value: "demo-app"
           - Name: IMAGE_TAG
-            Value: latest
+            Value: "latest"
       ServiceRole: !Ref CodeBuildServiceRole
 
   SecuredPipeline:
