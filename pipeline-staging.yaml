@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: "Set up CodePipeline pipelines."
 
 Resources:
-  ArtifactBucket:
+  PipelineArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: "aws-secured-pipeline-artifact-bucket"
@@ -171,12 +171,11 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
 
-
   CodeBuildScanIaCProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "codebuild-iac-scan"
-      Description: "IaC Scan"
+      Name: ScanIaC
+      Description: "Scan IaC"
       Artifacts:
         Type: CODEPIPELINE
       Source:
@@ -186,12 +185,13 @@ Resources:
         ComputeType: "BUILD_GENERAL1_SMALL"
         Image: "aws/codebuild/standard:5.0"
         Type: "LINUX_CONTAINER"
+        PrivilegedMode: true
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildBuildScanPushProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "Build, Scan, Push"
+      Name: BuildScanPush
       Description: "Build, Scan, Push"
       Artifacts:
         Type: CODEPIPELINE
@@ -215,7 +215,7 @@ Resources:
   CodeBuildScanStagingImageProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "Scan Staging Image"
+      Name: ScanStagingImage
       Description: "Scan Staging Image"
       Artifacts:
         Type: CODEPIPELINE
@@ -236,7 +236,7 @@ Resources:
   CodeBuildDeployStagingProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "Deploy to Staging"
+      Name: DeployToStaging
       Description: "Deploy to Staging"
       Artifacts:
         Type: CODEPIPELINE
@@ -265,7 +265,7 @@ Resources:
   CodeBuildScanStagingConfigProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "Scan Staging Config"
+      Name: ScanStagingConfig
       Description: "Scan Staging Config"
       Artifacts:
         Type: CODEPIPELINE
@@ -276,15 +276,15 @@ Resources:
         ComputeType: "BUILD_GENERAL1_SMALL"
         Image: "aws/codebuild/standard:5.0"
         Type: "LINUX_CONTAINER"
-      EnvironmentVariables:
-        - Name: STAGING_ACCOUNT_ID
-          Value: !Ref AWS::AccountId
+        EnvironmentVariables:
+          - Name: STAGING_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildPromoteProductionRepoProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "Promote Production Repo"
+      Name: PromoteProductionRepo
       Description: "Promote Production Repo"
       Artifacts:
         Type: CODEPIPELINE
@@ -310,7 +310,7 @@ Resources:
   CodeBuildScanProductionImageProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "Scan Production Image"
+      Name: ScanProductionImage
       Description: "Scan Production Image"
       Artifacts:
         Type: CODEPIPELINE
@@ -321,19 +321,19 @@ Resources:
         ComputeType: "BUILD_GENERAL1_SMALL"
         Image: "aws/codebuild/standard:5.0"
         Type: "LINUX_CONTAINER"
-      EnvironmentVariables:
-        - Name: DOCKER_REG
-          Value: 381231809965.dkr.ecr.us-west-2.amazonaws.com
-        - Name: IMAGE_NAME
-          Value: demo-app
-        - Name: IMAGE_TAG
-          Value: latest
+        EnvironmentVariables:
+          - Name: DOCKER_REG
+            Value: 381231809965.dkr.ecr.us-west-2.amazonaws.com
+          - Name: IMAGE_NAME
+            Value: demo-app
+          - Name: IMAGE_TAG
+            Value: latest
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildDeployProductionProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: "Deploy to Production"
+      Name: DeployToProduction
       Description: "Deploy to Production"
       Artifacts:
         Type: CODEPIPELINE
@@ -362,11 +362,11 @@ Resources:
   SecuredPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: "AWS Secured Pipeline"
+      Name: AWSSecuredPipeline
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       ArtifactStore:
         Type: S3
-        Location: !Ref ArtifactBucket
+        Location: !Ref PipelineArtifactBucket
       Stages:
         - Name: Source
           Actions:
@@ -377,15 +377,15 @@ Resources:
                 Provider: CodeStarSourceConnection
                 Version: 1
               Configuration:
-                ConnectionArn: arn:aws:codestar-connections:us-west-2:381231809965:connection/82838f32-6e39-493b-bc45-241e51406a83
+                ConnectionArn: arn:aws:codestar-connections:us-west-2:911290716430:connection/baf6fdba-995f-4e59-8497-49c224c3479b
                 FullRepositoryId: lacework-alliances/aws-secured-pipeline
                 BranchName: master
               OutputArtifacts:
                 - Name: App
               RunOrder: 1
-        - Name: Scan IaC
+        - Name: ScanIaC
           Actions:
-            - Name: Scan IaC
+            - Name: ScanIaC
               ActionTypeId:
                 Category: Test
                 Owner: AWS
@@ -398,9 +398,9 @@ Resources:
               OutputArtifacts:
                 - Name: IaCScanOutput
               RunOrder: 2
-        - Name: Build, Scan, Push
+        - Name: BuildScanPush
           Actions:
-            - Name: Build, Scan, Push
+            - Name: BuildScanPush
               ActionTypeId:
                 Category: Build
                 Owner: AWS
@@ -413,9 +413,9 @@ Resources:
               OutputArtifacts:
                 - Name: BuildScanPushOutput
               RunOrder: 3
-        - Name: Scan Staging Image
+        - Name: ScanStagingImage
           Actions:
-            - Name: Scan Staging Image
+            - Name: ScanStagingImage
               ActionTypeId:
                 Category: Test
                 Owner: AWS
@@ -428,9 +428,9 @@ Resources:
               OutputArtifacts:
                 - Name: ScanStagingImage
               RunOrder: 4
-        - Name: Deploy to Staging
+        - Name: DeployToStaging
           Actions:
-            - Name: Deploy to Staging
+            - Name: DeployToStaging
               ActionTypeId:
                 Category: Build
                 Owner: AWS
@@ -443,9 +443,9 @@ Resources:
               OutputArtifacts:
                 - Name: DeployStagingOutput
               RunOrder: 5
-        - Name: Scan Staging Config
+        - Name: ScanStagingConfig
           Actions:
-            - Name: Scan Staging Config
+            - Name: ScanStagingConfig
               ActionTypeId:
                 Category: Test
                 Owner: AWS
@@ -456,18 +456,18 @@ Resources:
               InputArtifacts:
                 - Name: App
               RunOrder: 6
-        - Name: Approval Stage
+        - Name: ApprovalStage
           Actions:
-            - Name: Approval Stage
+            - Name: ApprovalStage
               ActionTypeId:
                 Category: Approval
                 Owner: AWS
                 Version: 1
                 Provider: Manual
               RunOrder: 7
-        - Name: Push to Production Repo
+        - Name: PromoteToProductionRepo
           Actions:
-            - Name: Push to Production Repo
+            - Name: PromoteToProductionRepo
               ActionTypeId:
                 Category: Build
                 Owner: AWS
@@ -478,11 +478,11 @@ Resources:
               InputArtifacts:
                 - Name: App
               OutputArtifacts:
-                - Name: PushProductionRepoOutput
+                - Name: PromoteProductionRepoOutput
               RunOrder: 8
-        - Name: Scan Production Image
+        - Name: ScanProductionImage
           Actions:
-            - Name: Scan Production Image
+            - Name: ScanProductionImage
               ActionTypeId:
                 Category: Test
                 Owner: AWS
@@ -495,9 +495,9 @@ Resources:
               OutputArtifacts:
                 - Name: ScanProductionImageOutput
               RunOrder: 9
-        - Name: Deploy to Production
+        - Name: DeployToProduction
           Actions:
-            - Name: Deploy to Production
+            - Name: DeployToProduction
               ActionTypeId:
                 Category: Build
                 Owner: AWS
