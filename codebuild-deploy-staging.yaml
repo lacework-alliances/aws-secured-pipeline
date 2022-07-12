@@ -2,8 +2,7 @@ version: 0.2
 phases:
   post_build:
     commands:
-      - aws eks update-kubeconfig --name $EKS_CLUSTER --role-arn arn:aws:iam::$STAGING_ACCOUNT_ID:role/eks-codebuild-kubectl-role
-      - kubectl create secret docker-registry regcred --docker-server=$STAGING_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password) --namespace=demo-app
+      - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
       - sed "s|imageName|$DOCKER_REG/$IMAGE_NAME:$IMAGE_TAG|g" deployment.yaml > my-deployment.yaml
       - cat my-deployment.yaml
       - kubectl apply -f my-deployment.yaml
