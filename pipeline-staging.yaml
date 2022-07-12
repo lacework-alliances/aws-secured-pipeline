@@ -302,9 +302,9 @@ Resources:
           - Name: IMAGE_TAG
             Value: latest
           - Name: STAGING_DOCKER_REG
-            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com"
+            Value: "911290716430.dkr.ecr.us-west-2.amazonaws.com"
           - Name: PRODUCTION_DOCKER_REG
-            Value: !Sub "381231809965.dkr.ecr.${AWS::Region}.amazonaws.com"
+            Value: "381231809965.dkr.ecr.us-west-2.amazonaws.com"
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildScanProductionImageProject:
