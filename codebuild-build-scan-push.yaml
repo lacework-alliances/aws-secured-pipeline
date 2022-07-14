@@ -5,6 +5,8 @@ env:
     LW_ACCESS_TOKEN: "INLINE_SCANNER_TOKEN"
 phases:
   install:
+    runtime-versions:
+      java: corretto11
     commands:
       - export LW_ACCOUNT=$LW_ACCOUNT
       - export LW_ACCESS_TOKEN=$LW_ACCESS_TOKEN
@@ -14,6 +16,7 @@ phases:
       - chmod +x lw-scanner
   build:
     commands:
+      - mvn clean install
       - docker build -t "$DOCKER_REG/$IMAGE_NAME:$CODEBUILD_BUILD_NUMBER" -t "$DOCKER_REG/$IMAGE_NAME:latest" .
   post_build:
     commands:
