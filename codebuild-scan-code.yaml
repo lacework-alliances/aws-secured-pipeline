@@ -12,7 +12,7 @@ phases:
       - export PATH=$PATH:./aws-codeguru-cli/bin
   build:
     commands:
-      - aws-codeguru-cli --region us-west-2 --no-prompt  --fail-on-recommendations --root-dir ./ --src src --output ./output
+      - aws-codeguru-cli --region us-west-2 --root-dir ./ --src src --output ./output --no-prompt  --fail-on-recommendations
 
 
 
