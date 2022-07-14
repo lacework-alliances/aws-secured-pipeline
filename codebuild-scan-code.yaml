@@ -1,0 +1,16 @@
+version: 0.2
+phases:
+  build:
+    runtime-versions:
+      java: corretto11
+    commands:
+      - java -version
+      - mvn --version
+      - git --version
+      - curl -OL https://github.com/aws/aws-codeguru-cli/releases/download/0.0.1/aws-codeguru-cli.zip
+      - unzip aws-codeguru-cli.zip
+      - export PATH=$PATH:./aws-codeguru-cli/bin
+      - aws-codeguru-cli --root-dir ./ --build target/classes --src src --output ./output
+
+
+

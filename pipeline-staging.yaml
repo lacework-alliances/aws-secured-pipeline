@@ -126,6 +126,27 @@ Resources:
                   - ssm:GetParameters
                 Resource:
                   - !Join [ '', [ 'arn:aws:ssm:*:', !Ref 'AWS::AccountId', ':parameter/*' ] ]
+              - Effect: Allow
+                Action:
+                  - codeguru-reviewer:ListRepositoryAssociations
+                  - codeguru-reviewer:AssociateRepository
+                  - codeguru-reviewer:DescribeRepositoryAssociation
+                  - codeguru-reviewer:CreateCodeReview
+                  - codeguru-reviewer:DescribeCodeReview
+                  - codeguru-reviewer:ListRecommendations
+                  - iam:CreateServiceLinkedRole
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetBucket*
+                  - s3:List*
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - "arn:aws:s3:::codeguru-reviewer-*"
+                  - "arn:aws:s3:::codeguru-reviewer-*/*"
 
   EksCodeBuildKubectlRole:
     Type: AWS::IAM::Role
@@ -170,6 +191,23 @@ Resources:
                 'sts:ExternalId': !Ref AWS::StackId
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+
+  CodeBuildScanCodeProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: ScanCode
+      Description: "Scan Code"
+      Artifacts:
+        Type: CODEPIPELINE
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: "codebuild-scan-code.yaml"
+      Environment:
+        ComputeType: "BUILD_GENERAL1_SMALL"
+        Image: "aws/codebuild/standard:5.0"
+        Type: "LINUX_CONTAINER"
+        PrivilegedMode: true
+      ServiceRole: !Ref CodeBuildServiceRole
 
   CodeBuildScanIaCProject:
     Type: AWS::CodeBuild::Project
@@ -385,6 +423,21 @@ Resources:
               OutputArtifacts:
                 - Name: App
               RunOrder: 1
+        - Name: ScanCode
+          Actions:
+            - Name: ScanCode
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildScanCodeProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: CodeScanOutput
+              RunOrder: 2
         - Name: ScanIaC
           Actions:
             - Name: ScanIaC
@@ -399,7 +452,7 @@ Resources:
                 - Name: App
               OutputArtifacts:
                 - Name: IaCScanOutput
-              RunOrder: 2
+              RunOrder: 3
         - Name: BuildScanPush
           Actions:
             - Name: BuildScanPush
@@ -414,7 +467,7 @@ Resources:
                 - Name: App
               OutputArtifacts:
                 - Name: BuildScanPushOutput
-              RunOrder: 3
+              RunOrder: 4
         - Name: ScanStagingImage
           Actions:
             - Name: ScanStagingImage
@@ -429,7 +482,7 @@ Resources:
                 - Name: App
               OutputArtifacts:
                 - Name: ScanStagingImage
-              RunOrder: 4
+              RunOrder: 5
         - Name: DeployToStaging
           Actions:
             - Name: DeployToStaging
@@ -444,7 +497,7 @@ Resources:
                 - Name: App
               OutputArtifacts:
                 - Name: DeployStagingOutput
-              RunOrder: 5
+              RunOrder: 6
         - Name: ScanStagingConfig
           Actions:
             - Name: ScanStagingConfig
@@ -457,7 +510,7 @@ Resources:
                 ProjectName: !Ref CodeBuildScanStagingConfigProject
               InputArtifacts:
                 - Name: App
-              RunOrder: 6
+              RunOrder: 7
         - Name: ApprovalStage
           Actions:
             - Name: ApprovalStage
@@ -466,7 +519,7 @@ Resources:
                 Owner: AWS
                 Version: 1
                 Provider: Manual
-              RunOrder: 7
+              RunOrder: 8
         - Name: PromoteToProductionRepo
           Actions:
             - Name: PromoteToProductionRepo
@@ -481,7 +534,7 @@ Resources:
                 - Name: App
               OutputArtifacts:
                 - Name: PromoteProductionRepoOutput
-              RunOrder: 8
+              RunOrder: 9
         - Name: ScanProductionImage
           Actions:
             - Name: ScanProductionImage
@@ -496,7 +549,7 @@ Resources:
                 - Name: App
               OutputArtifacts:
                 - Name: ScanProductionImageOutput
-              RunOrder: 9
+              RunOrder: 10
         - Name: DeployToProduction
           Actions:
             - Name: DeployToProduction
@@ -511,6 +564,6 @@ Resources:
                 - Name: App
               OutputArtifacts:
                 - Name: DeployProductionOutput
-              RunOrder: 10
+              RunOrder: 11
 
 
