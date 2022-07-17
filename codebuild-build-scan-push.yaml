@@ -16,7 +16,7 @@ phases:
       - docker build -t "$DOCKER_REG/$IMAGE_NAME:$CODEBUILD_BUILD_NUMBER" -t "$DOCKER_REG/$IMAGE_NAME:latest" .
   post_build:
     commands:
-      - export LW_ACCOUNT=$LW_ACCOUNT
+      - export LW_ACCOUNT_NAME=$LW_ACCOUNT
       - export LW_ACCESS_TOKEN=$LW_ACCESS_TOKEN
       - export LW_SCANNER_DISABLE_UPDATES=true
       - export LW_SCANNER_SAVE_RESULTS=true

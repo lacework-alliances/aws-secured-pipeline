@@ -2,11 +2,12 @@ version: 0.2
 phases:
   post_build:
     commands:
+      - aws sts get-caller-identity
       - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER --role-arn arn:aws:iam::$PROD_ACCOUNT_ID:role/eks-codebuild-kubectl-role
       - sed "s|imageName|$DOCKER_REG/$IMAGE_NAME:$IMAGE_TAG|g" deployment.yaml > my-deployment.yaml
       - cat my-deployment.yaml
       - kubectl apply -f my-deployment.yaml -n demo-app
-      - while [ -z "$url" ]; do url=$(kubectl describe service demo-app -n demo-app | grep 'LoadBalancer Ingress:' | awk '{printf "https://%s",$3;}'); sleep 2; done
+      - while [ -z "$url" ]; do url=$(kubectl describe service demo-app -n demo-app | grep 'LoadBalancer Ingress:' | awk '{printf "http://%s",$3;}'); sleep 2; done
       - echo "$url"
       - echo "Prod Demo App launched!"
 
