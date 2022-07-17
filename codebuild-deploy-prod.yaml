@@ -3,7 +3,10 @@ phases:
   post_build:
     commands:
       - aws sts get-caller-identity
-      - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER --role-arn arn:aws:iam::$PROD_ACCOUNT_ID:role/eks-codebuild-kubectl-role
+      - aws sts assume-role --role-arn arn:aws:iam::381231809965:role/eks-codebuild-kubectl-role --role-session-name deploy-prod
+      - aws sts get-caller-identity
+      - aws eks list-clusters
+      - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
       - sed "s|imageName|$DOCKER_REG/$IMAGE_NAME:$IMAGE_TAG|g" deployment.yaml > my-deployment.yaml
       - cat my-deployment.yaml
       - kubectl apply -f my-deployment.yaml -n demo-app
