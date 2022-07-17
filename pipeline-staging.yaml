@@ -122,6 +122,10 @@ Resources:
                 Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/eks-codebuild-kubectl-role"
               - Effect: Allow
                 Action:
+                  - sts:AssumeRole
+                Resource: !Sub "arn:aws:iam::381231809965:role/eks-codebuild-kubectl-role"
+              - Effect: Allow
+                Action:
                   - ssm:GetParameter
                   - ssm:GetParameters
                 Resource:
