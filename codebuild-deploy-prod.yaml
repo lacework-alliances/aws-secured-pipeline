@@ -13,7 +13,7 @@ phases:
       - aws configure set aws_secret_access_key ${sts[1]} --profile $OUTPUT_PROFILE
       - aws configure set aws_session_token ${sts[2]} --profile $OUTPUT_PROFILE
       - echo "credentials stored in the profile named $OUTPUT_PROFILE"
-      - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER --role-arn arn:aws:iam::$PROD_ACCOUNT_ID:role/eks-codebuild-kubectl-role --verbose
+      - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER --verbose --profile deployprod
       - sed "s|imageName|$DOCKER_REG/$IMAGE_NAME:$IMAGE_TAG|g" deployment.yaml > my-deployment.yaml
       - cat my-deployment.yaml
       - kubectl apply -f my-deployment.yaml -n demo-app
