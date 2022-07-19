@@ -2,199 +2,172 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: "Set up CodePipeline pipelines."
 
 Resources:
-  PipelineArtifactBucket:
-    Type: AWS::S3::Bucket
+  SecuredPipeline:
+    Type: AWS::CodePipeline::Pipeline
     Properties:
-      BucketName: "aws-secured-pipeline-artifact-bucket"
-
-  PermissionForEventsToInvokePipeline:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: EventsRolePolicy
-      Roles:
-        - !Ref CodePipelineEventsRole
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Resource: "*"
-            Effect: Allow
-            Action:
-              - codepipeline:*
-
-  CodePipelineEventsRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: "code-pipeline-events-role"
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - events.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-
-  CodePipelineServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: "code-pipeline-service-role"
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service:
-                - codepipeline.amazonaws.com
-            Action: sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: AWS-CodePipeline-Service-3
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - codestar-connections:UseConnection
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - codebuild:BatchGetBuilds
-                  - codebuild:StartBuild
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - iam:PassRole
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - s3:*
-                Resource: '*'
-
-  CodeBuildServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: "codebuild-service-role"
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codebuild.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: "/"
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                  - ecr:GetAuthorizationToken
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:BatchGetImage
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:PutImage
-                  - ecr:InitiateLayerUpload
-                  - ecr:UploadLayerPart
-                  - ecr:CompleteLayerUpload
-                Resource: "*"
-              - Effect: Allow
-                Action: eks:*
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - s3:*
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - sts:AssumeRole
-                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/eks-codebuild-kubectl-role"
-              - Effect: Allow
-                Action:
-                  - sts:AssumeRole
-                Resource: !Sub "arn:aws:iam::381231809965:role/eks-codebuild-kubectl-role"
-              - Effect: Allow
-                Action:
-                  - ssm:GetParameter
-                  - ssm:GetParameters
-                Resource:
-                  - !Join [ '', [ 'arn:aws:ssm:*:', !Ref 'AWS::AccountId', ':parameter/*' ] ]
-              - Effect: Allow
-                Action:
-                  - codeguru-reviewer:ListRepositoryAssociations
-                  - codeguru-reviewer:AssociateRepository
-                  - codeguru-reviewer:DescribeRepositoryAssociation
-                  - codeguru-reviewer:CreateCodeReview
-                  - codeguru-reviewer:DescribeCodeReview
-                  - codeguru-reviewer:ListRecommendations
-                  - iam:CreateServiceLinkedRole
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - s3:CreateBucket
-                  - s3:GetBucket*
-                  - s3:List*
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                Resource:
-                  - "arn:aws:s3:::codeguru-reviewer-*"
-                  - "arn:aws:s3:::codeguru-reviewer-*/*"
-
-  EksCodeBuildKubectlRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: "eks-codebuild-kubectl-role"
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !GetAtt CodeBuildServiceRole.Arn
-            Action:
-              - sts:AssumeRole
-      Path: "/"
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - eks:Describe*
-                Resource: "*"
-
-  StagingLaceworkCrossAccountECRRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      RoleName: StagingLaceworkCrossAccountECRRole
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
-            Principal:
-              AWS: !Join
-                - ''
-                - - 'arn:aws:iam::'
-                  - '434813966438'
-                  - ':root'
-            Condition:
-              StringEquals:
-                'sts:ExternalId': !Ref AWS::StackId
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+      Name: AWSSecuredPipeline
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref PipelineArtifactBucket
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: GitHubRepo
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: 1
+              Configuration:
+                ConnectionArn: arn:aws:codestar-connections:us-west-2:911290716430:connection/baf6fdba-995f-4e59-8497-49c224c3479b
+                FullRepositoryId: lacework-alliances/aws-secured-pipeline
+                BranchName: master
+              OutputArtifacts:
+                - Name: App
+              RunOrder: 1
+        - Name: ScanCode
+          Actions:
+            - Name: ScanCode
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildScanCodeProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: CodeScanOutput
+              RunOrder: 2
+        - Name: ScanIaC
+          Actions:
+            - Name: ScanIaC
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildScanIaCProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: IaCScanOutput
+              RunOrder: 3
+        - Name: BuildScanPush
+          Actions:
+            - Name: BuildScanPush
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildBuildScanPushProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: BuildScanPushOutput
+              RunOrder: 4
+        - Name: ScanStagingImage
+          Actions:
+            - Name: ScanStagingImage
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildScanStagingImageProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: ScanStagingImage
+              RunOrder: 5
+        - Name: DeployToStaging
+          Actions:
+            - Name: DeployToStaging
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildDeployStagingProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: DeployStagingOutput
+              RunOrder: 6
+        - Name: ScanStagingConfig
+          Actions:
+            - Name: ScanStagingConfig
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildScanStagingConfigProject
+              InputArtifacts:
+                - Name: App
+              RunOrder: 7
+        - Name: ApprovalStage
+          Actions:
+            - Name: ApprovalStage
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+              RunOrder: 8
+        - Name: PromoteToProductionRepo
+          Actions:
+            - Name: PromoteToProductionRepo
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildPromoteProductionRepoProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: PromoteProductionRepoOutput
+              RunOrder: 9
+        - Name: ScanProductionImage
+          Actions:
+            - Name: ScanProductionImage
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildScanProductionImageProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: ScanProductionImageOutput
+              RunOrder: 10
+        - Name: DeployToProduction
+          Actions:
+            - Name: DeployToProduction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildDeployProductionProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: DeployProductionOutput
+              RunOrder: 11
 
   CodeBuildScanCodeProject:
     Type: AWS::CodeBuild::Project
@@ -403,171 +376,202 @@ Resources:
             Value: "latest"
       ServiceRole: !Ref CodeBuildServiceRole
 
-  SecuredPipeline:
-    Type: AWS::CodePipeline::Pipeline
+  PipelineArtifactBucket:
+    Type: AWS::S3::Bucket
     Properties:
-      Name: AWSSecuredPipeline
-      RoleArn: !GetAtt CodePipelineServiceRole.Arn
-      ArtifactStore:
-        Type: S3
-        Location: !Ref PipelineArtifactBucket
-      Stages:
-        - Name: Source
-          Actions:
-            - Name: GitHubRepo
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Provider: CodeStarSourceConnection
-                Version: 1
-              Configuration:
-                ConnectionArn: arn:aws:codestar-connections:us-west-2:911290716430:connection/baf6fdba-995f-4e59-8497-49c224c3479b
-                FullRepositoryId: lacework-alliances/aws-secured-pipeline
-                BranchName: master
-              OutputArtifacts:
-                - Name: App
-              RunOrder: 1
-        - Name: ScanCode
-          Actions:
-            - Name: ScanCode
-              ActionTypeId:
-                Category: Test
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildScanCodeProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: CodeScanOutput
-              RunOrder: 2
-        - Name: ScanIaC
-          Actions:
-            - Name: ScanIaC
-              ActionTypeId:
-                Category: Test
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildScanIaCProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: IaCScanOutput
-              RunOrder: 3
-        - Name: BuildScanPush
-          Actions:
-            - Name: BuildScanPush
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildBuildScanPushProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: BuildScanPushOutput
-              RunOrder: 4
-        - Name: ScanStagingImage
-          Actions:
-            - Name: ScanStagingImage
-              ActionTypeId:
-                Category: Test
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildScanStagingImageProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: ScanStagingImage
-              RunOrder: 5
-        - Name: DeployToStaging
-          Actions:
-            - Name: DeployToStaging
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildDeployStagingProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: DeployStagingOutput
-              RunOrder: 6
-        - Name: ScanStagingConfig
-          Actions:
-            - Name: ScanStagingConfig
-              ActionTypeId:
-                Category: Test
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildScanStagingConfigProject
-              InputArtifacts:
-                - Name: App
-              RunOrder: 7
-        - Name: ApprovalStage
-          Actions:
-            - Name: ApprovalStage
-              ActionTypeId:
-                Category: Approval
-                Owner: AWS
-                Version: 1
-                Provider: Manual
-              RunOrder: 8
-        - Name: PromoteToProductionRepo
-          Actions:
-            - Name: PromoteToProductionRepo
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildPromoteProductionRepoProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: PromoteProductionRepoOutput
-              RunOrder: 9
-        - Name: ScanProductionImage
-          Actions:
-            - Name: ScanProductionImage
-              ActionTypeId:
-                Category: Test
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildScanProductionImageProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: ScanProductionImageOutput
-              RunOrder: 10
-        - Name: DeployToProduction
-          Actions:
-            - Name: DeployToProduction
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildDeployProductionProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: DeployProductionOutput
-              RunOrder: 11
+      BucketName: "aws-secured-pipeline-artifact-bucket"
+
+  PermissionForEventsToInvokePipeline:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EventsRolePolicy
+      Roles:
+        - !Ref CodePipelineEventsRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Resource: "*"
+            Effect: Allow
+            Action:
+              - codepipeline:*
+
+  CodePipelineEventsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "code-pipeline-events-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "code-pipeline-service-role"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AWS-CodePipeline-Service-3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codestar-connections:UseConnection
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: '*'
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "codebuild-service-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - ecr:GetAuthorizationToken
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: "*"
+              - Effect: Allow
+                Action: eks:*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/eks-codebuild-kubectl-role"
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource: !Sub "arn:aws:iam::381231809965:role/eks-codebuild-kubectl-role"
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource:
+                  - !Join [ '', [ 'arn:aws:ssm:*:', !Ref 'AWS::AccountId', ':parameter/*' ] ]
+              - Effect: Allow
+                Action:
+                  - codeguru-reviewer:ListRepositoryAssociations
+                  - codeguru-reviewer:AssociateRepository
+                  - codeguru-reviewer:DescribeRepositoryAssociation
+                  - codeguru-reviewer:CreateCodeReview
+                  - codeguru-reviewer:DescribeCodeReview
+                  - codeguru-reviewer:ListRecommendations
+                  - iam:CreateServiceLinkedRole
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetBucket*
+                  - s3:List*
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - "arn:aws:s3:::codeguru-reviewer-*"
+                  - "arn:aws:s3:::codeguru-reviewer-*/*"
+
+  EksCodeBuildKubectlRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "eks-codebuild-kubectl-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt CodeBuildServiceRole.Arn
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - eks:Describe*
+                Resource: "*"
+
+  StagingLaceworkCrossAccountECRRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: StagingLaceworkCrossAccountECRRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              AWS: !Join
+                - ''
+                - - 'arn:aws:iam::'
+                  - '434813966438'
+                  - ':root'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref AWS::StackId
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+
+
+
+
 
 
